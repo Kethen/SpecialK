@@ -425,9 +425,10 @@ ImGui_DX11Startup ( IDXGISwapChain* pSwapChain )
         SK_LOGi2 (L" _d3d11_rbk->init (SwapChain, %p, %p) Succeeded",
                                          pD3D11Dev.p,  pImmediateContext.p);
 
-        //SK_DXGI_UpdateSwapChain (pSwapChain);
         // DXVK multi swap chain quirk workaround
-        SK_DXGI_UpdateSwapChain (_d3d11_rbk->_pSwapChain.p);
+        if (_d3d11_rbk->_pSwapChain.IsEqualObject(pSwapChain)){
+          SK_DXGI_UpdateSwapChain (pSwapChain);
+        }
 
         return true;
       }
@@ -2987,7 +2988,14 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
 
     if ( pDev != nullptr || pDev12 != nullptr )
     {
-      SK_BeginBufferSwapEx (bWaitOnFailure);
+      if (_IsBackendD3D11(rb.api)){
+        // more DXVK double swapchain workaround
+        if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
+          SK_BeginBufferSwapEx (bWaitOnFailure);
+        }
+      }else{
+        SK_BeginBufferSwapEx (bWaitOnFailure);
+      }
     }
 
     rb.setLatencyMarkerNV (PRESENT_START);
