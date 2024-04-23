@@ -2360,8 +2360,8 @@ volatile LONG lSemaphoreCount1 = 0;
  * Present -> Present1 double presentation hook firing, Far Cry 5
  * with DXVK would spawn two swapchains for unknown reasons
  */
-volatile LONGLONG llCurrentChain = 0;
-volatile LONG lChainMismatchCnt  = 0;
+volatile PVOID pCurrentChain = nullptr;
+volatile LONG lChainMismatchCnt = 0;
 
 HRESULT
 SK_DXGI_PresentBase ( IDXGISwapChain         *This,
@@ -2379,15 +2379,15 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
   // Far Cry 5 + DXVK multiple swapchain work-around
   if (Source == SK_DXGI_PresentSource::Hook)
   {
-    InterlockedCompareExchange64(&llCurrentChain, (LONGLONG)This, 0);
-    LONGLONG llCurrentChain_ = InterlockedOr64(&llCurrentChain, 0);
-    if ((LONGLONG)This != llCurrentChain_)
+    InterlockedCompareExchangePointer(&pCurrentChain, (PVOID)This, nullptr);
+    PVOID pCurrentChain_ = InterlockedCompareExchangePointer(&pCurrentChain, (PVOID)This, nullptr);
+    if ((PVOID)This != pCurrentChain_)
     {
       InterlockedIncrement(&lChainMismatchCnt);
       LONG lChainMismatchCnt_ = InterlockedOr(&lChainMismatchCnt, 0);
       if (lChainMismatchCnt_ < 20)
       {
-        SK_LOG1 ( ( L"DXVK work around 0x%I64x, 0x%I64x, %d", (LONGLONG)This, llCurrentChain_, lChainMismatchCnt_),
+        SK_LOG1 ( ( L"DXVK work around %p, %p, %d", (PVOID)This, pCurrentChain_, lChainMismatchCnt_),
                     L"   DXGI   " );
         // don't handle the present
         if (DXGISwapChain1_Present1 != nullptr)
@@ -2404,10 +2404,11 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
                                     SyncInterval,
                                       Flags );
       }
-      SK_LOG1 ( ( L"DXVK work around setting current chain to 0x%I64x from 0x%I64x", (LONGLONG)This, llCurrentChain_),
+      SK_LOG1 ( ( L"DXVK work around setting current chain to %p from %p", (PVOID)This, pCurrentChain_),
                   L"   DXGI   " );
-      // swapchain definitely changed, update llCurrentChain then let SK swapchain change logic handle the change
-      InterlockedExchange64(&llCurrentChain, (LONGLONG)This);
+      // swapchain definitely changed, update pCurrentChain then let SK swapchain change logic handle the change
+      // InterlockedExchangePointer(&pCurrentChain, (PVOID)This); // sheesh this works on the 64bit compiler but not 32bit
+      InterlockedCompareExchangePointer(&pCurrentChain, (PVOID)This, pCurrentChain_);
       InterlockedExchange(&lChainMismatchCnt, 0);
     }
 
