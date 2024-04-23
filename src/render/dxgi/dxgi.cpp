@@ -2376,7 +2376,7 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
   if (This == nullptr) // This can't happen, just humor static analysis
     return DXGI_ERROR_INVALID_CALL;
 
-  SK_LOG1 ( ( L"PresentBase, This: %p, source %d", (PVOID)This, Source),
+  SK_LOG1 ( ( L"PresentBase, This: %p, Source %d", (PVOID)This, Source),
               L"   DXGI   " );
 
   // Far Cry 5 + DXVK multiple swapchain work-around
@@ -2743,6 +2743,9 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
     ReadAcquire (&SK_DXGI_LiveWrappedSwapChain1s) > 0 ||
     ReadAcquire (&SK_DXGI_LiveWrappedSwapChains)  > 0;
   // ^^^ It's not required that IDXGISwapChain1 or higher invokes Present1!
+
+  SK_LOG1 ( ( L"PresentBase, config.render.osd.draw_in_vidcap: %d, Source: %d, has_wrapped_swapchains: %d", config.render.osd.draw_in_vidcap, Source, has_wrapped_swapchains),
+              L"   DXGI   " );
 
   if (config.render.osd.draw_in_vidcap && has_wrapped_swapchains)
   {
