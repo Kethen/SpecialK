@@ -425,7 +425,9 @@ ImGui_DX11Startup ( IDXGISwapChain* pSwapChain )
         SK_LOGi2 (L" _d3d11_rbk->init (SwapChain, %p, %p) Succeeded",
                                          pD3D11Dev.p,  pImmediateContext.p);
 
-        SK_DXGI_UpdateSwapChain (pSwapChain);
+        //SK_DXGI_UpdateSwapChain (pSwapChain);
+        // DXVK multi swap chain quirk workaround
+        SK_DXGI_UpdateSwapChain (_d3d11_rbk->_pSwapChain.p);
 
         return true;
       }
@@ -3064,7 +3066,7 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
             L"   DXGI   " );
         if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
           /*
-           * some games have two swapchains with dxvk
+           * some games have two swapchains with DXVK
            *
            * looking at x86dbg, after removing the Present -> Present1 chain
            * with https://github.com/SpecialKO/SpecialK/issues/167, double
@@ -3154,7 +3156,7 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
               L"   DXGI   " );
           if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
             /*
-             * ditto dxvk fix, see previous handling of TickEx
+             * ditto DXVK fix, see previous handling of TickEx
              */
             SK::Framerate::TickEx (false, 0.0, { 0,0 }, This);
           }
