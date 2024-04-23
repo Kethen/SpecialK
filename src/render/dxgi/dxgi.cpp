@@ -3062,7 +3062,7 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
     if (config.fps.timing_method == SK_FrametimeMeasures_PresentSubmit)
     {
       if (_IsBackendD3D11(rb.api)){
-        SK_LOG1 ( ( L"This: %p, _d3d11_rbk->_pSwapChain.p: %p", This, _d3d11_rbk->_pSwapChain.p ),
+        SK_LOG1 ( ( L"tickex check This: %p, _d3d11_rbk->_pSwapChain.p: %p", This, _d3d11_rbk->_pSwapChain.p ),
             L"   DXGI   " );
         if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
           /*
@@ -3076,6 +3076,8 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
            * doulbe check if the swapchain is the one registered in _d3d11_rbk
            * before adding to frametime stats for frame limiter disabled mode
            */
+          SK_LOG1 ( ( L"tickex ticking on swapchain %p", This),
+              L"   DXGI   " );
           SK::Framerate::TickEx (false, 0.0, { 0,0 }, This);
         }
       }else{
@@ -3152,12 +3154,14 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
          (config.fps.timing_method == SK_FrametimeMeasures_LimiterPacing && __target_fps <= 0.0f))
       {
         if (_IsBackendD3D11(rb.api)){
-          SK_LOG1 ( ( L"This: %p, _d3d11_rbk->_pSwapChain.p: %p", This, _d3d11_rbk->_pSwapChain.p ),
+          SK_LOG1 ( ( L"tickex check This: %p, _d3d11_rbk->_pSwapChain.p: %p", This, _d3d11_rbk->_pSwapChain.p ),
               L"   DXGI   " );
           if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
             /*
              * ditto DXVK fix, see previous handling of TickEx
              */
+            SK_LOG1 ( ( L"tickex ticking on swapchain %p", This),
+                L"   DXGI   " );
             SK::Framerate::TickEx (false, 0.0, { 0,0 }, This);
           }
         }else{
