@@ -2380,13 +2380,15 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
   if (Source == SK_DXGI_PresentSource::Hook)
   {
     InterlockedCompareExchange64(&llCurrentChain, (LONGLONG)This, 0);
-    LONGLONG currentChain_ = InterlockedOr64(&llCurrentChain, 0);
-    if ((LONGLONG)This != currentChain_)
+    LONGLONG llCurrentChain_ = InterlockedOr64(&llCurrentChain, 0);
+    if ((LONGLONG)This != llCurrentChain_)
     {
       InterlockedIncrement(&lChainMismatchCnt);
       LONG lChainMismatchCnt_ = InterlockedOr(&lChainMismatchCnt, 0);
       if (lChainMismatchCnt_ < 20)
       {
+        SK_LOG1 ( ( L"DXVK work around 0x%I64x, 0x%I64x, %d", (LONGLONG)This, llCurrentChain_, lChainMismatchCnt_),
+                    L"   DXGI   " );
         // don't handle the present
         if (DXGISwapChain1_Present1 != nullptr)
         {
@@ -2402,6 +2404,8 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
                                     SyncInterval,
                                       Flags );
       }
+      SK_LOG1 ( ( L"DXVK work around setting current chain to 0x%I64x from 0x%I64x", (LONGLONG)This, llCurrentChain_),
+                  L"   DXGI   " );
       // swapchain definitely changed, update llCurrentChain then let SK swapchain change logic handle the change
       InterlockedExchange64(&llCurrentChain, (LONGLONG)This);
       InterlockedExchange(&lChainMismatchCnt, 0);
