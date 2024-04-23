@@ -3059,7 +3059,24 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
     // Measure frametime before Present is issued
     if (config.fps.timing_method == SK_FrametimeMeasures_PresentSubmit)
     {
-      SK::Framerate::TickEx (false, 0.0, { 0,0 }, rb.swapchain.p);
+      if (_IsBackendD3D11(rb.api)){
+        if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
+          /*
+           * some games have two swapchains with dxvk
+           *
+           * looking at x86dbg, after removing the Present -> Present1 chain
+           * with https://github.com/SpecialKO/SpecialK/issues/167, double
+           * Present calls were not observed inside DXVK anymore but from
+           * Far Cry 5 itself, on two different swap chains
+           *
+           * doulbe check if the swapchain is the one registered in _d3d11_rbk
+           * before adding to frametime stats for frame limiter disabled mode
+           */
+          SK::Framerate::TickEx (false, 0.0, { 0,0 }, rb.swapchain.p);
+        }
+      }else{
+        SK::Framerate::TickEx (false, 0.0, { 0,0 }, rb.swapchain.p);
+      }
     }
 
     HRESULT hr =
@@ -3130,7 +3147,16 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
       if (config.fps.timing_method == SK_FrametimeMeasures_NewFrameBegin ||
          (config.fps.timing_method == SK_FrametimeMeasures_LimiterPacing && __target_fps <= 0.0f))
       {
-        SK::Framerate::TickEx (false, 0.0, { 0,0 }, rb.swapchain.p);
+        if (_IsBackendD3D11(rb.api)){
+          if (_d3d11_rbk->_pSwapChain.IsEqualObject(This)){
+            /*
+             * ditto dxvk fix, see previous handling of TickEx
+             */
+            SK::Framerate::TickEx (false, 0.0, { 0,0 }, rb.swapchain.p);
+          }
+        }else{
+          SK::Framerate::TickEx (false, 0.0, { 0,0 }, rb.swapchain.p);
+        }
       }
 
     // We have hooks in the D3D11/12 state tracker that should take care of this
