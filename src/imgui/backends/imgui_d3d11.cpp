@@ -1817,7 +1817,20 @@ SK_D3D11_RenderCtx::init (IDXGISwapChain*      pSwapChain,
       // We're running on the wrong swapchain, shut this down and defer creation until the next frame
       if (! _pSwapChain.IsEqualObject (pSwapChain))
       {
-        release (_pSwapChain.p);
+        /*
+         * done for DXVK compat, some games would for some reason
+         * use a secondary chain once in a while causing excess
+         * reset
+         *
+         * for instance Far Cry 5 does that with DXVK
+         */
+        _diffSwapChainCnt++;
+        if(_diffSwapChainCnt > 20){
+          // confirm swapchain has changed after 20 init calls on a new chain
+          SK_LOG1 ( ( L"swap chain change detected, releasing _d3d11_rbk"),
+                    L"D3D11BkEnd" );
+          release (_pSwapChain.p);
+        }
       }
 
       else
@@ -1874,6 +1887,7 @@ SK_D3D11_RenderCtx::init (IDXGISwapChain*      pSwapChain,
       frames_ [0].pRenderOutput = _Frame [0].pBackBuffer;
 
       _pSwapChain = pSwapChain;
+      _diffSwapChainCnt = 0;
       _pDevice    = pDevice;
       _pDeviceCtx = pDeviceCtx;
 
@@ -2019,8 +2033,18 @@ DWORD SK_ImGui_DrawFrame       (DWORD dwFlags, void* user);
 void
 SK_D3D11_RenderCtx::present (IDXGISwapChain* pSwapChain)
 {
-  SK_ReleaseAssert (  _d3d11_rbk->_pSwapChain.IsEqualObject (pSwapChain));
   SK_ReleaseAssert (! _d3d11_rbk->frames_.empty ());
+
+  // ::init should handle the reset, just let is slide
+  if (!_d3d11_rbk->_pSwapChain.IsEqualObject (pSwapChain)){
+    return;
+  }else{
+    //swapchain is okay, reset the change detection counter
+    SK_LOG1 ( ( L"resetting _diffSwapChainCnt from %d to 0",
+              _diffSwapChainCnt),
+              L"D3D11BkEnd" );
+    _diffSwapChainCnt = 0;
+  }
 
   if (_d3d11_rbk->frames_.empty ())
     return;

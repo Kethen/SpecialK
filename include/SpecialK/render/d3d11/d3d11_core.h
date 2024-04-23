@@ -2291,6 +2291,9 @@ struct SK_D3D11_RenderCtx {
   SK_ComPtr <ID3D11Device>                  _pDevice          = nullptr;
   SK_ComPtr <ID3D11DeviceContext>           _pDeviceCtx       = nullptr;
   SK_ComPtr <IDXGISwapChain>                _pSwapChain       = nullptr;
+  // DXVK compat, don't reset the moment a different swap chain is used
+  // for instance Far Cry 5 with DXVK does that
+  uint32_t                                  _diffSwapChainCnt = 0;
 
   reshade::api::effect_runtime*             _pReShadeRuntime  = nullptr;
 
