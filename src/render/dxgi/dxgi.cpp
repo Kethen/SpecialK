@@ -2353,6 +2353,16 @@ volatile LONG lSkipNextPresent = 0;
 volatile LONG lSemaphoreCount0 = 0;
 volatile LONG lSemaphoreCount1 = 0;
 
+/*
+ * Far Cry 5 + DXVK multiple swapchain work-around
+ *
+ * while https://github.com/doitsujin/dxvk/pull/3966 cleared up
+ * Present -> Present1 double presentation hook firing, Far Cry 5
+ * with DXVK would spawn two swapchains for unknown reasons
+ */
+volatile LONGLONG llCurrentChain = 0;
+volatile LONG lChainMismatchCnt  = 0;
+
 HRESULT
 SK_DXGI_PresentBase ( IDXGISwapChain         *This,
                       UINT                    SyncInterval,
@@ -2365,6 +2375,44 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
 {
   if (This == nullptr) // This can't happen, just humor static analysis
     return DXGI_ERROR_INVALID_CALL;
+
+  // Far Cry 5 + DXVK multiple swapchain work-around
+  if (Source == SK_DXGI_PresentSource::Hook)
+  {
+    InterlockedCompareExchange64(&llCurrentChain, (LONGLONG)This, 0);
+    LONGLONG currentChain_ = InterlockedOr64(&llCurrentChain, 0);
+    if ((LONGLONG)This != currentChain_)
+    {
+      InterlockedIncrement(&lChainMismatchCnt);
+      LONG lChainMismatchCnt_ = InterlockedOr(&lChainMismatchCnt, 0);
+      if (lChainMismatchCnt_ < 20)
+      {
+        // don't handle the present
+        if (DXGISwapChain1_Present1 != nullptr)
+        {
+          return
+            DXGISwapChain1_Present1 ( (IDXGISwapChain1 *)This,
+                                        SyncInterval,
+                                          Flags,
+                                            pPresentParameters );
+        }
+
+        return
+          DXGISwapChain_Present ( This,
+                                    SyncInterval,
+                                      Flags );
+      }
+      // swapchain definitely changed, update llCurrentChain then let SK swapchain change logic handle the change
+      InterlockedExchange64(&llCurrentChain, (LONGLONG)This);
+      InterlockedExchange(&lChainMismatchCnt, 0);
+    }
+
+    else
+    {
+      // the swapchain is correct, reset lChainMismatchCnt
+      InterlockedExchange(&lChainMismatchCnt, 0);
+    }
+  }
 
   SK_RenderBackend& rb =
     SK_GetCurrentRenderBackend ();
