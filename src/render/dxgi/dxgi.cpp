@@ -2376,11 +2376,17 @@ SK_DXGI_PresentBase ( IDXGISwapChain         *This,
   if (This == nullptr) // This can't happen, just humor static analysis
     return DXGI_ERROR_INVALID_CALL;
 
+  SK_LOG1 ( ( L"PresentBase, This: %p, source %d", (PVOID)This, Source),
+              L"   DXGI   " );
+
   // Far Cry 5 + DXVK multiple swapchain work-around
   if (Source == SK_DXGI_PresentSource::Hook)
   {
-    InterlockedCompareExchangePointer(&pCurrentChain, (PVOID)This, nullptr);
     PVOID pCurrentChain_ = InterlockedCompareExchangePointer(&pCurrentChain, (PVOID)This, nullptr);
+    if (pCurrentChain_ == nullptr)
+    {
+      pCurrentChain_ = InterlockedCompareExchangePointer(&pCurrentChain, (PVOID)This, nullptr);
+    }
     if ((PVOID)This != pCurrentChain_)
     {
       InterlockedIncrement(&lChainMismatchCnt);
